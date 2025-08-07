@@ -10,20 +10,23 @@ jobs:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
     
+    # Use the 'Production' environment to access secrets.
     environment: Production
     
     env:
-      TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }} # 🚨 UPDATED: Using GitHub Actions Environment Variable
-      TF_CLOUD_WORKSPACE: ${{ vars.TF_CLOUD_WORKSPACE }}      # 🚨 UPDATED: Using GitHub Actions Environment Variable
+      TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
+      TF_CLOUD_WORKSPACE: ${{ vars.TF_CLOUD_WORKSPACE }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Terraform Cloud Login
-        run: |
-          # The TF_API_TOKEN is passed directly to the `terraform login` command.
-          echo "${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}" | terraform login - -app-password
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+          # The 'cli_config_credentials_token' input is the most reliable way to pass your token.
+          cli_config_credentials_token: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
         
       - name: Terraform Init
         working-directory: ./infra-terraform
