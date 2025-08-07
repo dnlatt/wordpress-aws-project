@@ -19,31 +19,33 @@ provider "aws" {
   region = var.region
 }
 
-# Create a VPC
+# VPC
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
+
   tags = {
     Name = "main-vpc"
   }
 }
 
-# Create a public subnet
+# Subnet
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "ap-southeast-1a"
   map_public_ip_on_launch = true
+
   tags = {
     Name = "public-subnet"
   }
 }
 
-# Create an internet gateway
+# Internet Gateway
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 }
 
-# Route table
+# Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -57,13 +59,13 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Associate subnet with route table
+# Route Table Association
 resource "aws_route_table_association" "a" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
 
-# Security group for EC2
+# Security Group
 resource "aws_security_group" "web_sg" {
   name        = "web-sg"
   description = "Allow HTTP and SSH"
@@ -91,46 +93,49 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-# IAM Role for EC2 to access S3
-resource "aws_iam_role" "ec2_role" {
-  name = "ec2-s3-access-role"
+# IAM Role for EC2 SSM
+resource "aws_iam_role" "ssm_role" {
+  name = "EC2SSMRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
   })
 }
 
-# Attach S3 full access policy
+resource "aws_iam_role_policy_attachment" "ssm_core" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 resource "aws_iam_role_policy_attachment" "s3_access" {
-  role       = aws_iam_role.ec2_role.name
+  role       = aws_iam_role.ssm_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-# Instance profile for EC2
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "ec2-s3-profile"
-  role = aws_iam_role.ec2_role.name
+resource "aws_iam_instance_profile" "ssm_instance_profile" {
+  name = "EC2SSMInstanceProfile"
+  role = aws_iam_role.ssm_role.name
 }
 
-# EC2 instance with UserData to install WordPress
+# EC2 Instance with User Data to install WordPress
 resource "aws_instance" "wordpress" {
   ami                         = var.ami
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
-  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
+  iam_instance_profile        = aws_iam_instance_profile.ssm_instance_profile.name
   associate_public_ip_address = true
-  key_name                    = "your-key-pair-name" # Replace with your key
 
   user_data = <<-EOF
-
                 #!/bin/bash
                 yum update -y
 
@@ -148,19 +153,14 @@ resource "aws_instance" "wordpress" {
                 # Add ec2-user to docker group so no sudo needed
                 usermod -aG docker ec2-user
 
-                # Change directory to ec2-user home
                 cd /home/ec2-user
 
-                # If repo not cloned yet, clone it (replace with your git repo)
                 if [ ! -d "wordpress-docker" ]; then
-                sudo -u ec2-user git clone https://github.com/dnlatt/wordpress-aws-project.git
+                  sudo -u ec2-user git clone https://github.com/dnlatt/wordpress-aws-project.git
                 fi
 
                 cd wordpress-docker
-
-                # Run docker-compose (use ec2-user)
                 sudo -u ec2-user docker-compose up -d
-
             EOF
 
   tags = {
@@ -177,7 +177,7 @@ resource "aws_s3_bucket" "wordpress_bucket" {
   }
 }
 
-# CloudWatch Logs Group (basic setup)
+# CloudWatch Logs Group
 resource "aws_cloudwatch_log_group" "wordpress_log_group" {
   name              = "/wordpress/app"
   retention_in_days = 1
