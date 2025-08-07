@@ -9,11 +9,11 @@ jobs:
   terraform:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
+    
+    # Link the job to the 'Production' environment to access its secrets.
     environment: Production
     
     env:
-      # These environment variables are now available to all steps in this job
-      TF_API_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -25,17 +25,12 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.0
+          # 🐛 Use the dedicated input for the Terraform Cloud API token. This is the most reliable way to provide the token to the CLI.
+          cli_config_credentials_token: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
 
       - name: Debug Environment Variables
         run: |
-          echo "Checking for TF_API_TOKEN and other secrets..."
-          if [ -z "$TF_API_TOKEN" ]; then
-            echo "Error: TF_API_TOKEN is not set!"
-            exit 1
-          else
-            echo "TF_API_TOKEN is present and starts with: ${TF_API_TOKEN:0:4}..."
-          fi
-          
+          echo "Checking for AWS secrets..."
           if [ -z "$AWS_ACCESS_KEY_ID" ]; then
             echo "Error: AWS_ACCESS_KEY_ID is not set!"
             exit 1
@@ -49,7 +44,7 @@ jobs:
           else
             echo "AWS_SECRET_ACCESS_KEY is present."
           fi
-
+          
       - name: Terraform Init
         working-directory: ./infra-terraform
         run: terraform init
