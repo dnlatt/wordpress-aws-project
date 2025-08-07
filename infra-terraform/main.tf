@@ -167,7 +167,7 @@ resource "aws_instance" "wordpress" {
 
                 # Navigate into the specific directory that contains docker-compose.yml
                 
-                cd /home/ubuntu/wordpress-aws-project/wordpress-docker/build
+                cd /home/ubuntu/wordpress-aws-project/
 
                 # Run docker-compose up as the 'ubuntu' user
                 echo "Running docker-compose..."
