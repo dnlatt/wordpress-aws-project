@@ -9,6 +9,8 @@ jobs:
   terraform:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
+    environment: Production
+    
     env:
       # These environment variables are now available to all steps in this job
       TF_API_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
