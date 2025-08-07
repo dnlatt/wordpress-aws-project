@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # These environment variables are now available to all steps in this job
-      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      TF_API_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
