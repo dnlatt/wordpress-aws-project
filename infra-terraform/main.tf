@@ -142,13 +142,11 @@ resource "aws_instance" "wordpress" {
                 # Log script start
                 echo "Starting cloud-init user data script..."
 
-                # Update package lists and install all required software in one command.
-                # 'docker.io' is the correct package name for Ubuntu.
+                # Update package lists and install all required software.
                 apt-get update -y
                 apt-get install -y git docker.io docker-compose ca-certificates curl gnupg
 
                 # Ensure the 'docker' group exists before adding the user.
-                # This prevents a common error if the group isn't created automatically.
                 if ! getent group docker > /dev/null; then
                     groupadd docker
                 fi
@@ -160,24 +158,22 @@ resource "aws_instance" "wordpress" {
                 systemctl enable docker
                 systemctl start docker
 
-                # Change to the 'ubuntu' user's home directory.
-                # This is the expected location for the git clone command.
+                # Go to the 'ubuntu' user's home directory.
                 cd /home/ubuntu
 
                 # Clone the project repository.
                 echo "Cloning the WordPress repository..."
                 sudo -u ubuntu git clone https://github.com/dnlatt/wordpress-aws-project.git
 
-                # Navigate into the cloned project directory.
-                # This ensures docker-compose.yml is in the current working directory.
-                cd /home/ubuntu/wordpress-aws-project
+                # Navigate into the specific directory that contains docker-compose.yml
+                
+                cd /home/ubuntu/wordpress-aws-project/wordpress-docker/build
 
-                # Build and run the Docker containers in detached mode.
+                # Run docker-compose up as the 'ubuntu' user
                 echo "Running docker-compose..."
                 sudo -u ubuntu docker-compose up -d
 
-                # Log script completion
-                echo "User data script finished successfully!"
+                echo "User data script finished successfully."
 
             EOF
 
