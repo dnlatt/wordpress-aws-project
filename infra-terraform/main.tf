@@ -137,39 +137,47 @@ resource "aws_instance" "wordpress" {
 
   user_data = <<-EOF
                 #!/bin/bash
-                # Update package list and install git, docker
+                set -e
+
+                # Log script start
+                echo "Starting cloud-init user data script..."
+
+                # Update package lists and install all required software in one command.
+                # 'docker.io' is the correct package name for Ubuntu.
                 apt-get update -y
+                apt-get install -y git docker.io docker-compose ca-certificates curl gnupg
 
-                # The package name for docker on Ubuntu is 'docker.io'
-                apt-get install -y git docker.io docker-compose
-                apt-get install -y ca-certificates curl gnupg
+                # Ensure the 'docker' group exists before adding the user.
+                # This prevents a common error if the group isn't created automatically.
+                if ! getent group docker > /dev/null; then
+                    groupadd docker
+                fi
 
-                # Create the docker group if it doesn't exist
-                groupadd docker
-
-                # Add the 'ubuntu' user to the docker group
+                # Add the 'ubuntu' user to the 'docker' group to allow running Docker commands without sudo.
                 usermod -aG docker ubuntu
 
-                # Start and enable docker service
+                # Start and enable the Docker service.
                 systemctl enable docker
                 systemctl start docker
 
-                # Go to the 'ubuntu' user's home directory
+                # Change to the 'ubuntu' user's home directory.
+                # This is the expected location for the git clone command.
                 cd /home/ubuntu
 
-                # Clone the repository as the 'ubuntu' user
-                # The -u flag in 'sudo' runs the command as the specified user.
-                # The user's home directory is where the repo should be cloned.
+                # Clone the project repository.
+                echo "Cloning the WordPress repository..."
                 sudo -u ubuntu git clone https://github.com/dnlatt/wordpress-aws-project.git
 
-                # Change to the project directory
+                # Navigate into the cloned project directory.
+                # This ensures docker-compose.yml is in the current working directory.
                 cd /home/ubuntu/wordpress-aws-project
 
-                # Run docker-compose up as the 'ubuntu' user
+                # Build and run the Docker containers in detached mode.
+                echo "Running docker-compose..."
                 sudo -u ubuntu docker-compose up -d
 
-                # Final cleanup (optional)
-                echo "User data script finished!"
+                # Log script completion
+                echo "User data script finished successfully!"
 
             EOF
 
