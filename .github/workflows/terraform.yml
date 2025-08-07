@@ -22,6 +22,14 @@ jobs:
       - name: Terraform Init
         working-directory: ./infra-terraform
         run: terraform init
+      - name: Check if TF_API_TOKEN exists
+        run: |
+          if [ -z "$TF_API_TOKEN" ]; then
+            echo "TF_API_TOKEN is not set!"
+            exit 1
+          else
+            echo "TF_API_TOKEN is present."
+          fi
         env:
           TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
