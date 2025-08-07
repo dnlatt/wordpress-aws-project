@@ -10,12 +10,13 @@ jobs:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
     
-    # Use the 'Production' environment to access secrets.
+    # 🐛 SOLUTION: Use the 'Production' environment to access secrets.
     environment: Production
     
     env:
       TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
       TF_CLOUD_WORKSPACE: ${{ vars.TF_CLOUD_WORKSPACE }}
+      TF_WORKING_DIRECTORY: ./infra-terraform
 
     steps:
       - name: Checkout repo
@@ -25,39 +26,17 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.0
-          # The 'cli_config_credentials_token' input is the most reliable way to pass your token.
           cli_config_credentials_token: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
-        
-      - name: Terraform Init
-        working-directory: ./infra-terraform
-        run: terraform init
-        
-      # The following steps are no longer needed for a VCS-driven workflow.
-      # Terraform Cloud handles the plan and apply steps automatically after a push.
-      # You can, however, use dedicated actions to control the run if needed.
-      # For a basic push, Terraform Cloud will automatically trigger a plan and apply.
-      
-      # - name: Terraform Plan
-      # - name: Terraform Apply
-      
-      # Optional: To manually trigger a run via the API, you would use a different action.
-      # This is often used for non-VCS-driven workflows.
-      
-      # - name: Upload configuration to TFC
-      #   uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
-      #   id: upload
-      #   with:
-      #     workspace: ${{ env.TF_CLOUD_WORKSPACE }}
-      #     directory: ./infra-terraform
-      #     speculative: true # Set to true for PRs, false for master branch pushes
-      #   env:
-      #     TFE_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
 
-      # - name: Create a new TFC run
-      #   uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
-      #   with:
-      #     workspace: ${{ env.TF_CLOUD_WORKSPACE }}
-      #     configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
-      #     is_destroy: false # Set to true to destroy infrastructure
-      #   env:
-      #     TFE_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ${{ env.TF_WORKING_DIRECTORY }}
+        
+      - name: Upload configuration and trigger TFC run
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        with:
+          workspace: ${{ env.TF_CLOUD_WORKSPACE }}
+          directory: ${{ env.TF_WORKING_DIRECTORY }}
+        env:
+          TFC_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
