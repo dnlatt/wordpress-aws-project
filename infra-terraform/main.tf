@@ -169,7 +169,8 @@ resource "aws_instance" "wordpress" {
                 sudo -u ubuntu docker-compose up -d
 
                 # Final cleanup (optional)
-                echo "User data script finished"
+                echo "User data script finished!"
+
             EOF
 
   tags = {
