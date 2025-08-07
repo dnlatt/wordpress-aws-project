@@ -9,8 +9,7 @@ jobs:
   terraform:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
-    
-    # 🐛 SOLUTION: Use the 'Production' environment to access secrets.
+    # Use the 'Production' environment to access secrets.
     environment: Production
     
     env:
@@ -38,5 +37,5 @@ jobs:
         with:
           workspace: ${{ env.TF_CLOUD_WORKSPACE }}
           directory: ${{ env.TF_WORKING_DIRECTORY }}
-        env:
-          TFC_TOKEN: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
+          # 🚨 UPDATED: Pass the token directly to the action's input.
+          token: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
