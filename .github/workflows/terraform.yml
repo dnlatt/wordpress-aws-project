@@ -9,7 +9,8 @@ jobs:
   terraform:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
-    # Use the 'Production' environment to access secrets.
+    
+    #  Use the 'Production' environment to access secrets.
     environment: Production
     
     env:
@@ -27,15 +28,9 @@ jobs:
           terraform_version: 1.8.0
           cli_config_credentials_token: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
 
-      - name: Terraform Init
-        id: init
-        run: terraform init
-        working-directory: ${{ env.TF_WORKING_DIRECTORY }}
-        
       - name: Upload configuration and trigger TFC run
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
         with:
           workspace: ${{ env.TF_CLOUD_WORKSPACE }}
           directory: ${{ env.TF_WORKING_DIRECTORY }}
-          # 🚨 UPDATED: Pass the token directly to the action's input.
           token: ${{ secrets.TF_CLOUD_TOKEN_APP_TERRAFORM_IO }}
