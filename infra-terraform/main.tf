@@ -137,30 +137,39 @@ resource "aws_instance" "wordpress" {
 
   user_data = <<-EOF
                 #!/bin/bash
-                yum update -y
+                # Update package list and install git, docker
+                apt-get update -y
 
-                # Install git, docker
-                yum install -y git docker
+                # The package name for docker on Ubuntu is 'docker.io'
+                apt-get install -y git docker.io docker-compose
+                apt-get install -y ca-certificates curl gnupg
+
+                # Create the docker group if it doesn't exist
+                groupadd docker
+
+                # Add the 'ubuntu' user to the docker group
+                usermod -aG docker ubuntu
 
                 # Start and enable docker service
                 systemctl enable docker
                 systemctl start docker
 
-                # Install docker-compose binary
-                curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-                chmod +x /usr/local/bin/docker-compose
+                # Go to the 'ubuntu' user's home directory
+                cd /home/ubuntu
 
-                # Add ec2-user to docker group so no sudo needed
-                usermod -aG docker ec2-user
+                # Clone the repository as the 'ubuntu' user
+                # The -u flag in 'sudo' runs the command as the specified user.
+                # The user's home directory is where the repo should be cloned.
+                sudo -u ubuntu git clone https://github.com/dnlatt/wordpress-aws-project.git
 
-                cd /home/ec2-user
+                # Change to the project directory
+                cd /home/ubuntu/wordpress-aws-project
 
-                if [ ! -d "wordpress-docker" ]; then
-                  sudo -u ec2-user git clone https://github.com/dnlatt/wordpress-aws-project.git
-                fi
+                # Run docker-compose up as the 'ubuntu' user
+                sudo -u ubuntu docker-compose up -d
 
-                cd wordpress-docker
-                sudo -u ec2-user docker-compose up -d
+                # Final cleanup (optional)
+                echo "User data script finished"
             EOF
 
   tags = {
