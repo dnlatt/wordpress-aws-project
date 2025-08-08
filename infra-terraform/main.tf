@@ -224,12 +224,7 @@ resource "aws_instance" "wordpress" {
 
                 # Update package lists and install all required software.
                 apt-get update -y
-                apt-get install -y git docker.io docker-compose ca-certificates curl gnupg awscli
-
-                # Ensure the 'docker' group exists before adding the user.
-                if ! getent group docker > /dev/null; then
-                    groupadd docker
-                fi
+                apt-get install -y git docker.io docker-compose ca-certificates curl gnupg
 
                 # Add the 'ubuntu' user to the 'docker' group to allow running Docker commands without sudo.
                 usermod -aG docker ubuntu
@@ -246,23 +241,24 @@ resource "aws_instance" "wordpress" {
                 sudo -u ubuntu git clone https://github.com/dnlatt/wordpress-aws-project.git
 
                 # Navigate into the specific directory that contains docker-compose.yml
-                
                 cd /home/ubuntu/wordpress-aws-project/
 
-                # Retrieve parameters from AWS Systems Manager Parameter Store
-                # This requires awscli, which is now installed in the script.
-                DB_USER=$(aws ssm get-parameter --name "/wordpress/db/user" --with-decryption --query "Parameter.Value" --output text --region ${var.region})
-                DB_PASSWORD=$(aws ssm get-parameter --name "/wordpress/db/password" --with-decryption --query "Parameter.Value" --output text --region ${var.region})
-                DB_NAME=$(aws ssm get-parameter --name "/wordpress/db/name" --with-decryption --query "Parameter.Value" --output text --region ${var.region})
+                # Retrieve parameters from AWS Systems Manager Parameter Store.
+                # Note: The 'ubuntu' user needs permissions to run the 'aws' command.
+                # If awscli is not installed, the below commands will fail.
+                DB_USER=$(aws ssm get-parameter --name "/wordpress/db/user" --with-decryption --query "Parameter.Value" --output text)
+                DB_PASSWORD=$(aws ssm get-parameter --name "/wordpress/db/password" --with-decryption --query "Parameter.Value" --output text)
+                DB_NAME=$(aws ssm get-parameter --name "/wordpress/db/name" --with-decryption --query "Parameter.Value" --output text)
 
-                # Create the .env file with the retrieved credentials
+                # Create the .env file with the retrieved credentials as the 'ubuntu' user.
                 echo "Creating .env file with retrieved credentials..."
-                echo "DB_USER=$DB_USER" > .env
-                echo "DB_PASSWORD=$DB_PASSWORD" >> .env
-                echo "DB_NAME=$DB_NAME" >> .env
-                
+                sudo -u ubuntu sh -c "
+                echo \"DB_USER=$DB_USER\" > .env
+                echo \"DB_PASSWORD=$DB_PASSWORD\" >> .env
+                echo \"DB_NAME=$DB_NAME\" >> .env
+                "
                 # Set permissions on the .env file so it's not world-readable
-                chmod 600 .env
+                sudo -u ubuntu chmod 600 .env
 
                 # Run docker-compose up as the 'ubuntu' user
                 echo "Running docker-compose..."
