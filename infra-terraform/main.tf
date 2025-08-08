@@ -222,9 +222,9 @@ resource "aws_instance" "wordpress" {
                 # Log script start
                 echo "Starting cloud-init user data script..."
 
-                # Update package lists and install all required software.
+                # Update package lists and install all required software, including awscli.
                 apt-get update -y
-                apt-get install -y git docker.io docker-compose ca-certificates curl gnupg
+                apt-get install -y git docker.io docker-compose ca-certificates curl gnupg awscli
 
                 # Add the 'ubuntu' user to the 'docker' group to allow running Docker commands without sudo.
                 usermod -aG docker ubuntu
@@ -240,15 +240,14 @@ resource "aws_instance" "wordpress" {
                 echo "Cloning the WordPress repository..."
                 sudo -u ubuntu git clone https://github.com/dnlatt/wordpress-aws-project.git
 
-                # Navigate into the specific directory that contains docker-compose.yml
+                # Navigate into the project's root directory.
                 cd /home/ubuntu/wordpress-aws-project/
 
                 # Retrieve parameters from AWS Systems Manager Parameter Store.
-                # Note: The 'ubuntu' user needs permissions to run the 'aws' command.
-                # If awscli is not installed, the below commands will fail.
-                DB_USER=$(aws ssm get-parameter --name "/wordpress/db/user" --with-decryption --query "Parameter.Value" --output text)
-                DB_PASSWORD=$(aws ssm get-parameter --name "/wordpress/db/password" --with-decryption --query "Parameter.Value" --output text)
-                DB_NAME=$(aws ssm get-parameter --name "/wordpress/db/name" --with-decryption --query "Parameter.Value" --output text)
+                # The --region flag is important for the awscli command to work properly.
+                DB_USER=$(aws ssm get-parameter --name "/wordpress/db/user" --with-decryption --query "Parameter.Value" --output text --region ap-southeast-1)
+                DB_PASSWORD=$(aws ssm get-parameter --name "/wordpress/db/password" --with-decryption --query "Parameter.Value" --output text --region ap-southeast-1)
+                DB_NAME=$(aws ssm get-parameter --name "/wordpress/db/name" --with-decryption --query "Parameter.Value" --output text --region ap-southeast-1)
 
                 # Create the .env file with the retrieved credentials as the 'ubuntu' user.
                 echo "Creating .env file with retrieved credentials..."
